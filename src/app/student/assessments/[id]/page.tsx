@@ -128,9 +128,18 @@ export default function StudentAssessmentDetailPage() {
 
   const status = computeStatus(assessment);
   const hasPassword = !!assessment.access_password_hash;
+  const canJoin = status === "ONGOING";
 
   async function joinAttempt() {
     if (!assessmentId) return;
+    if (!canJoin) {
+      setJoinError(
+        status === "UPCOMING"
+          ? "Assessment belum dimulai."
+          : "Assessment sudah berakhir."
+      );
+      return;
+    }
     setJoining(true);
     setJoinError(null);
     try {
@@ -191,10 +200,16 @@ export default function StudentAssessmentDetailPage() {
           <div className="mt-6 flex items-center gap-2">
             <button
               onClick={joinAttempt}
-              disabled={joining}
+              disabled={joining || !canJoin}
               className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
             >
-              {joining ? "Memulai..." : "Mulai / Lanjutkan"}
+              {joining
+                ? "Memulai..."
+                : status === "UPCOMING"
+                  ? "Belum Dimulai"
+                  : status === "ENDED"
+                    ? "Sudah Berakhir"
+                    : "Mulai / Lanjutkan"}
             </button>
             <button
               onClick={() => router.push("/student/assessments")}
