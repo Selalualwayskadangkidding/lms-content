@@ -23,7 +23,7 @@ type HistoryAttemptRow = {
   submitted_at: string | null;
   updated_at: string | null;
   score: number | null;
-  assessments?: { title: string } | { title: string }[] | null;
+  assessments?: { title: string } | null;
 };
 
 type AssessmentRow = {
@@ -113,12 +113,16 @@ export default async function StudentHome() {
     .slice(0, 5) as AssessmentRow[];
 
   const active = activeAttempt as ActiveAttemptRow | null;
-  const historyList: HistoryAttemptRow[] = (history ?? []).map((row) => ({
-    ...row,
-    assessments: Array.isArray(row.assessments)
-      ? row.assessments[0] ?? null
-      : row.assessments ?? null,
-  }));
+  const historyList: HistoryAttemptRow[] = (history ?? []).map((row) => {
+    const assessmentsRaw = (row as { assessments?: { title: string } | { title: string }[] | null })
+      .assessments;
+    return {
+      ...row,
+      assessments: Array.isArray(assessmentsRaw)
+        ? assessmentsRaw[0] ?? null
+        : assessmentsRaw ?? null,
+    };
+  });
   const availableIds = availableList.map((a) => a.id);
 
   const { data: completedAttempts } = await supabase
