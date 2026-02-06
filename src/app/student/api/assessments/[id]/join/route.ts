@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/app/auth/getRole";
 import { verifyPassword } from "@/lib/password";
@@ -8,9 +8,11 @@ type JoinPayload = {
 };
 
 export async function POST(
-  req: Request,
-  { params }: { params: { id?: string; Id?: string } }
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id: assessmentIdParam } = await context.params;
+
   const body = (await req.json().catch(() => ({}))) as JoinPayload;
   const supabase = await createClient();
   const { user, role } = await getUserRole();
@@ -18,17 +20,11 @@ export async function POST(
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
   if (role !== "STUDENT") return new NextResponse("Forbidden", { status: 403 });
 
-  let assessmentId = params.id ?? params.Id;
-  if (!assessmentId) {
-    const url = new URL(req.url);
-    const parts = url.pathname.split("/").filter(Boolean);
-    const idx = parts.indexOf("assessments");
-    if (idx >= 0 && parts[idx + 1]) {
-      assessmentId = parts[idx + 1];
-    }
-  }
+  // ✅ ini sekarang dijamin ada dari route [id]
+  const assessmentId = assessmentIdParam;
   if (!assessmentId) return new NextResponse("Missing id", { status: 400 });
 
+  // ===== bawah ini BIARIN SAMA (logic lu) =====
   const { data: assessment, error: aErr } = await supabase
     .from("assessments")
     .select("id,is_published,start_at,end_at,duration_minutes,access_password_hash")
