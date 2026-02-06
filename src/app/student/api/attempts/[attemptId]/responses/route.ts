@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserRole } from "@/app/auth/getRole";
 
@@ -8,9 +8,10 @@ type ResponsePayload = {
 };
 
 export async function POST(
-  req: Request,
-  { params }: { params: { attemptId: string } }
+  req: NextRequest,
+  { params }: { params: Promise<{ attemptId: string }> }
 ) {
+  const { attemptId: attemptIdParam } = await params;
   const body = (await req.json()) as ResponsePayload;
   const supabase = await createClient();
   const { user, role } = await getUserRole();
@@ -18,7 +19,7 @@ export async function POST(
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
   if (role !== "STUDENT") return new NextResponse("Forbidden", { status: 403 });
 
-  let attemptId = params.attemptId;
+  let attemptId = attemptIdParam;
   if (!attemptId) {
     const url = new URL(req.url);
     const parts = url.pathname.split("/").filter(Boolean);
