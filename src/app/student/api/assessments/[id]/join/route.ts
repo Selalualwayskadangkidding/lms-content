@@ -11,7 +11,7 @@ export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id: assessmentIdParam } = await context.params;
+  const { id: assessmentId } = await context.params;
 
   const body = (await req.json().catch(() => ({}))) as JoinPayload;
   const supabase = await createClient();
@@ -20,10 +20,9 @@ export async function POST(
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
   if (role !== "STUDENT") return new NextResponse("Forbidden", { status: 403 });
 
-  // ✅ ini sekarang dijamin ada dari route [id]
-  const assessmentId = assessmentIdParam;
   if (!assessmentId) return new NextResponse("Missing id", { status: 400 });
 
+  
   // ===== bawah ini BIARIN SAMA (logic lu) =====
   const { data: assessment, error: aErr } = await supabase
     .from("assessments")
