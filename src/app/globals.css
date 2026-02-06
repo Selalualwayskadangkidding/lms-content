@@ -1,3 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Make datetime picker icon visible (blue) */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(36%) sepia(95%) saturate(746%) hue-rotate(168deg) brightness(92%) contrast(92%);
+  cursor: pointer;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

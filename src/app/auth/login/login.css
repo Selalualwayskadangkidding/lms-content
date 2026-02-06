@@ -1,0 +1,192 @@
+/* Container utama dengan background gradient */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom, #eff6ff, #bfdbfe);
+  padding: 20px;
+  font-family: sans-serif;
+}
+
+/* Card putih di tengah */
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+/* Form layout */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.input-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.input-group input {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  transition: border 0.2s;
+}
+
+.input-group input:focus {
+  border-color: #3b82f6;
+}
+
+/* Password wrapper untuk ikon mata */
+.password-wrapper {
+  position: relative;
+  display: flex;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.forgot-link {
+  text-align: right;
+  margin-top: 5px;
+}
+
+.forgot-link a {
+  font-size: 12px;
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+.forgot-link a:hover {
+  text-decoration: underline;
+}
+
+/* Error message */
+.error-message {
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 1px solid #fee2e2;
+}
+
+/* Tombol Utama */
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+}
+
+/* Footer & Tombol Daftar */
+.login-footer {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.login-footer p {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.btn-secondary {
+  display: block;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #f9fafb;
+}
+/* Tambahkan di bagian bawah login.css */
+.success-message {
+  background: #f0fdf4;
+  color: #16a34a;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 1px solid #bbf7d0;
+  text-align: center;
+}
+/* Efek saat tombol sedang loading/disabled */
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed; /* Kursor berubah jadi tanda dilarang */
+  filter: grayscale(0.2);
+}
+
+/* Animasi halus untuk pesan agar tidak muncul tiba-tiba */
+.success-message, .error-message {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tambahan gaya untuk input saat loading */
+input:disabled {
+  background-color: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
