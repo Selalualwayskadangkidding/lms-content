@@ -33,7 +33,7 @@ export default async function TeacherAssessmentSummary({
     .from("teacher_results")
     .select("attempt_id,student_name,correct,wrong,blank,computed_score")
     .eq("assessment_id", params.id)
-    .order("computed_score", { ascending: false, nullsLast: true });
+    .order("computed_score", { ascending: false, nullsFirst: false });
 
   const list = (rows ?? []) as SummaryRow[];
   const info = assessment as AssessmentRow | null;

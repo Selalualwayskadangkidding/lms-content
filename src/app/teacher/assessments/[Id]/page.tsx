@@ -49,8 +49,8 @@ export default async function TeacherAssessmentDetail({
     .from("attempts")
     .select("id,student_id,score,updated_at,submitted_at")
     .eq("assessment_id", params.id)
-    .order("score", { ascending: false, nullsLast: true })
-    .order("updated_at", { ascending: false, nullsLast: true })
+    .order("score", { ascending: false })
+    .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -58,7 +58,7 @@ export default async function TeacherAssessmentDetail({
     .from("attempts")
     .select("id,student_id,score,updated_at,submitted_at")
     .eq("assessment_id", params.id)
-    .order("updated_at", { ascending: false, nullsLast: true })
+    .order("updated_at", { ascending: false })
     .limit(8);
 
   const top = topAttempt as AttemptRow | null;

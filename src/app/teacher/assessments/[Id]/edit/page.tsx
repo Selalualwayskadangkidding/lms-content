@@ -16,13 +16,16 @@ type Assessment = {
   access_password_hash: string | null;
 };
 
+type AssessmentWithSubject = Assessment & {
+  subjects?: { name: string } | null;
+};
 type QuestionRow = {
   id: string;
   prompt: string;
   points: number;
   position: number;
   options: { id: string; text: string; position: number }[];
-  answer_keys: { correct_option_id: string } | null;
+  answer_keys: { correct_option_id: string } | { correct_option_id: string }[] | null;
 };
 
 type QuestionDraft = {
@@ -99,9 +102,16 @@ export default function EditAssessmentPage() {
         .single();
 
       if (aErr) throw aErr;
-      const row = a as Assessment & { subjects?: { name: string } | null };
-      setAssessment(row);
-      setSubjectName(row.subjects?.name ?? "");
+      const assessmentsRaw = (a as { subjects?: { name: string } | { name: string }[] | null })
+        .subjects;
+      const normalized: AssessmentWithSubject = {
+        ...(a as Assessment),
+        subjects: Array.isArray(assessmentsRaw)
+          ? assessmentsRaw[0] ?? null
+          : assessmentsRaw ?? null,
+      };
+      setAssessment(normalized);
+      setSubjectName(normalized.subjects?.name ?? "");
 
       const { data: q, error: qErr } = await supabase
         .from("questions")
@@ -117,7 +127,10 @@ export default function EditAssessmentPage() {
         const opts = [...(row.options ?? [])].sort(
           (a, b) => (a.position ?? 0) - (b.position ?? 0)
         );
-        const correctId = row.answer_keys?.correct_option_id ?? null;
+        const answerKeysRaw = row.answer_keys;
+        const answerKey =
+          Array.isArray(answerKeysRaw) ? answerKeysRaw[0] ?? null : answerKeysRaw ?? null;
+        const correctId = answerKey?.correct_option_id ?? null;
         return {
           id: row.id,
           prompt: row.prompt,
