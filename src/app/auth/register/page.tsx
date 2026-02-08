@@ -32,8 +32,34 @@ export default function RegisterPage() {
 
     setLoading(true);
 
+    const emailTrimmed = email.trim().toLowerCase();
+    if (!emailTrimmed) {
+      setErr("Email wajib diisi!");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const checkRes = await fetch("/auth/api/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailTrimmed }),
+      });
+      if (!checkRes.ok) throw new Error(await checkRes.text());
+      const checkData = (await checkRes.json()) as { exists?: boolean };
+      if (checkData.exists) {
+        setErr("Email sudah terdaftar. Silakan login.");
+        setLoading(false);
+        return;
+      }
+    } catch (e: any) {
+      setErr(e.message ?? "Gagal cek email");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: emailTrimmed,
       options: {
         shouldCreateUser: true,
         data: { name },
