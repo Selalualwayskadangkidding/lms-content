@@ -37,8 +37,9 @@ export default function ForgotPage() {
       return;
     }
 
+    const origin = window.location.origin;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://localhost:3000/auth/callback?next=/auth/reset-password",
+      redirectTo: `${origin}/auth/callback?next=/auth/reset-password`,
     });
 
     setLoading(false); // 2. Matikan loading setelah proses selesai (baik sukses maupun error)

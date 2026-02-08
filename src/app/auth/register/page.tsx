@@ -58,13 +58,13 @@ export default function RegisterPage() {
       return;
     }
 
+    const origin = window.location.origin;
     const { error } = await supabase.auth.signInWithOtp({
       email: emailTrimmed,
       options: {
         shouldCreateUser: true,
         data: { name },
-        emailRedirectTo:
-          "http://localhost:3000/auth/callback?next=/auth/register/success",
+        emailRedirectTo: `${origin}/auth/callback?next=/auth/register/success`,
       },
     });
 
