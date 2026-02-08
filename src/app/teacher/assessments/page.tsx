@@ -190,10 +190,10 @@ export default function TeacherAssessmentsPage() {
                     <div className="text-slate-500">{formatSchedule(a)}</div>
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`/teacher/assessments/${a.id}/edit`}
+                        href={`/teacher/assessments/${a.id}`}
                         className="font-semibold text-sky-700"
                       >
-                        Edit →
+                        Detail Hasil →
                       </Link>
                       <button
                         onClick={() => deleteAssessment(a.id)}

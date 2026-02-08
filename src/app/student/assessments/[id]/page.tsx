@@ -43,6 +43,7 @@ function computeStatus(a: Assessment) {
 }
 
 function statusClass(status: string) {
+  if (status === "SELESAI") return "bg-slate-100 text-slate-700 ring-slate-200";
   if (status === "UPCOMING") return "bg-amber-100 text-amber-800 ring-amber-200";
   if (status === "ENDED") return "bg-slate-100 text-slate-700 ring-slate-200";
   return "bg-emerald-100 text-emerald-800 ring-emerald-200";
@@ -62,6 +63,7 @@ export default function StudentAssessmentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [completed, setCompleted] = useState(false);
   const [password, setPassword] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -82,6 +84,26 @@ export default function StudentAssessmentDetailPage() {
 
       if (qErr) throw qErr;
       setAssessment(data as Assessment);
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setCompleted(false);
+        return;
+      }
+
+      const { data: done } = await supabase
+        .from("attempts")
+        .select("id,status")
+        .eq("assessment_id", assessmentId)
+        .eq("student_id", user.id)
+        .in("status", ["SUBMITTED", "TIMED_OUT"])
+        .limit(1)
+        .maybeSingle();
+
+      setCompleted(!!done);
     } catch (e: any) {
       setError(e.message ?? "Gagal memuat data");
     } finally {
@@ -126,12 +148,16 @@ export default function StudentAssessmentDetailPage() {
     );
   }
 
-  const status = computeStatus(assessment);
+  const status = completed ? "SELESAI" : computeStatus(assessment);
   const hasPassword = !!assessment.access_password_hash;
-  const canJoin = status === "ONGOING";
+  const canJoin = !completed && status === "ONGOING";
 
   async function joinAttempt() {
     if (!assessmentId) return;
+    if (completed) {
+      setJoinError("Assessment sudah dikerjakan.");
+      return;
+    }
     if (!canJoin) {
       setJoinError(
         status === "UPCOMING"
@@ -205,7 +231,9 @@ export default function StudentAssessmentDetailPage() {
             >
               {joining
                 ? "Memulai..."
-                : status === "UPCOMING"
+                : status === "SELESAI"
+                  ? "Sudah selesai"
+                  : status === "UPCOMING"
                   ? "Belum Dimulai"
                   : status === "ENDED"
                     ? "Sudah Berakhir"

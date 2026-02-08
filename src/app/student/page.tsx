@@ -28,6 +28,7 @@ type HistoryAttemptRow = {
 
 type AssessmentRow = {
   id: string;
+  owner_id: string;
   title: string;
   duration_minutes: number | null;
   start_at: string | null;
@@ -98,7 +99,7 @@ export default async function StudentHome() {
 
   const { data: available } = await supabase
     .from("assessments")
-    .select("id,title,duration_minutes,start_at,end_at")
+    .select("id,owner_id,title,duration_minutes,start_at,end_at")
     .eq("is_published", true)
     .order("start_at", { ascending: true, nullsFirst: true })
     .limit(10);
@@ -124,6 +125,21 @@ export default async function StudentHome() {
     };
   });
   const availableIds = availableList.map((a) => a.id);
+  const ownerIds = Array.from(
+    new Set(availableList.map((a) => a.owner_id).filter(Boolean))
+  ) as string[];
+
+  let teacherById: Record<string, string | null> = {};
+  if (ownerIds.length > 0) {
+    const { data: teachers } = await supabase
+      .from("profiles")
+      .select("id,name")
+      .in("id", ownerIds)
+      .eq("role", "TEACHER");
+    teacherById = Object.fromEntries(
+      (teachers ?? []).map((t) => [t.id, t.name ?? null])
+    );
+  }
 
   const { data: completedAttempts } = await supabase
     .from("attempts")
@@ -230,6 +246,9 @@ export default async function StudentHome() {
                     <div>
                       <div className="text-lg font-extrabold text-slate-900">
                         {a.title}
+                      </div>
+                      <div className="mt-1 text-xs font-semibold text-slate-500">
+                        Guru: {teacherById[a.owner_id] ?? "Guru"}
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
                         Durasi: {a.duration_minutes ?? 0} menit

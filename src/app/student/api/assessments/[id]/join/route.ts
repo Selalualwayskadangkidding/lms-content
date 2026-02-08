@@ -50,6 +50,19 @@ export async function POST(
     if (!ok) return new NextResponse("Password salah", { status: 400 });
   }
 
+  const { data: completed } = await supabase
+    .from("attempts")
+    .select("id,status")
+    .eq("assessment_id", assessmentId)
+    .eq("student_id", user.id)
+    .in("status", ["SUBMITTED", "TIMED_OUT"])
+    .limit(1)
+    .maybeSingle();
+
+  if (completed) {
+    return new NextResponse("Assessment sudah dikerjakan", { status: 409 });
+  }
+
   const { data: existing } = await supabase
     .from("attempts")
     .select("id,expires_at,status")

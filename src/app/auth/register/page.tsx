@@ -19,6 +19,13 @@ export default function RegisterPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  function getAuthOrigin() {
+    const runtimeOrigin = typeof window !== "undefined" ? window.location.origin : "";
+    const envOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+    if (process.env.NODE_ENV === "production" && envOrigin) return envOrigin;
+    return runtimeOrigin || envOrigin || "http://localhost:3000";
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -58,7 +65,7 @@ export default function RegisterPage() {
       return;
     }
 
-    const origin = window.location.origin;
+    const origin = getAuthOrigin();
     const { error } = await supabase.auth.signInWithOtp({
       email: emailTrimmed,
       options: {

@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function StudentAttemptResultPage() {
   const params = useParams();
   const router = useRouter();
   const search = useSearchParams();
+  const supabase = useMemo(() => createClient(), []);
 
   const attemptId =
     typeof params?.id === "string"
@@ -19,6 +22,29 @@ export default function StudentAttemptResultPage() {
   const blank = Number(search.get("blank") ?? 0);
   const total = Number(search.get("total") ?? 0);
   const score = Number(search.get("score") ?? correct);
+
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadFeedback() {
+      if (!attemptId || attemptId === "-") {
+        setFeedbackLoading(false);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from("teacher_feedback")
+          .select("message,updated_at")
+          .eq("attempt_id", attemptId)
+          .maybeSingle();
+        setFeedback(data?.message ?? null);
+      } finally {
+        setFeedbackLoading(false);
+      }
+    }
+    loadFeedback();
+  }, [attemptId, supabase]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 via-slate-50 to-sky-100">
@@ -61,6 +87,18 @@ export default function StudentAttemptResultPage() {
             >
               Kembali ke Assessment
             </button>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur">
+          <h2 className="text-lg font-bold text-slate-900">Evaluasi Guru</h2>
+          <p className="mt-1 text-sm text-slate-600">Catatan dari guru untuk kamu.</p>
+          <div className="mt-4 text-sm text-slate-700">
+            {feedbackLoading
+              ? "Loading..."
+              : feedback
+                ? feedback
+                : "Belum ada evaluasi."}
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 type AssessmentRow = {
   id: string;
@@ -10,13 +11,14 @@ type AssessmentRow = {
   is_published: boolean;
 };
 
-type AttemptRow = {
-  id: string;
-  student_id: string;
-  score: number | null;
-  updated_at: string | null;
-  submitted_at: string | null;
-};
+  type AttemptRow = {
+    id: string;
+    student_id: string;
+    score: number | null;
+    updated_at: string | null;
+    submitted_at: string | null;
+    status?: string | null;
+  };
 
 type StudentLabelMap = Record<string, string>;
 
@@ -32,60 +34,98 @@ function formatDateTime(iso: string | null) {
   });
 }
 
-export default async function TeacherAssessmentDetail({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const supabase = await createClient();
+export default function TeacherAssessmentDetail() {
+  const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const params = useParams();
+  const assessmentId =
+    typeof params?.id === "string"
+      ? params.id
+      : typeof (params as { Id?: string })?.Id === "string"
+        ? (params as { Id?: string }).Id
+        : undefined;
 
-  const { data: assessment } = await supabase
-    .from("assessments")
-    .select("id,title,is_published")
-    .eq("id", params.id)
-    .maybeSingle();
+  const [loading, setLoading] = useState(true);
+  const [assessment, setAssessment] = useState<AssessmentRow | null>(null);
+  const [results, setResults] = useState<AttemptRow[]>([]);
+  const [labels, setLabels] = useState<StudentLabelMap>({});
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: topAttempt } = await supabase
-    .from("attempts")
-    .select("id,student_id,score,updated_at,submitted_at")
-    .eq("assessment_id", params.id)
-    .order("score", { ascending: false })
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  useEffect(() => {
+    async function fetchData() {
+      if (!assessmentId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData.user;
+        if (!user) {
+          router.push("/auth/login");
+          return;
+        }
 
-  const { data: latestAttempts } = await supabase
-    .from("attempts")
-    .select("id,student_id,score,updated_at,submitted_at")
-    .eq("assessment_id", params.id)
-    .order("updated_at", { ascending: false })
-    .limit(8);
+        const { data: assessmentRow, error: aErr } = await supabase
+          .from("assessments")
+          .select("id,title,is_published")
+          .eq("id", assessmentId)
+          .eq("owner_id", user.id)
+          .maybeSingle();
+        if (aErr) throw aErr;
+        setAssessment(assessmentRow as AssessmentRow | null);
 
-  const top = topAttempt as AttemptRow | null;
-  const latest = (latestAttempts ?? []) as AttemptRow[];
+        const { data: attempts, error: tErr } = await supabase
+          .from("attempts")
+          .select("id,student_id,score,updated_at,submitted_at,status")
+          .eq("assessment_id", assessmentId)
+          .in("status", ["SUBMITTED", "TIMED_OUT"])
+          .order("score", { ascending: false })
+          .order("updated_at", { ascending: false });
+        if (tErr) throw tErr;
+        const rows = (attempts ?? []) as AttemptRow[];
+        setResults(rows);
 
-  const studentIds = Array.from(
-    new Set([top?.student_id, ...latest.map((x) => x.student_id)].filter(Boolean))
-  ) as string[];
+        const ids = Array.from(new Set(rows.map((x) => x.student_id)));
+        const mapped: StudentLabelMap = {};
+        ids.forEach((id) => {
+          mapped[id] = `Siswa ${id.slice(0, 6)}`;
+        });
 
-  let labels: StudentLabelMap = {};
-  if (studentIds.length > 0) {
-    const admin = createAdminClient();
-    const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
-    const byId = new Map(data?.users?.map((u) => [u.id, u]) ?? []);
-    studentIds.forEach((id) => {
-      const user = byId.get(id);
-      const displayName =
-        (user?.user_metadata?.display_name as string | undefined) ||
-        (user?.user_metadata?.name as string | undefined) ||
-        (user?.email ? user.email.split("@")[0] : null) ||
-        "Siswa";
-      labels[id] = displayName;
+        if (ids.length > 0) {
+          const { data: profiles, error: pErr } = await supabase
+            .from("profiles")
+            .select("id,name")
+            .in("id", ids);
+          if (!pErr && profiles) {
+            profiles.forEach((p) => {
+              if (p.name) mapped[p.id] = p.name;
+            });
+          }
+        }
+
+        setLabels(mapped);
+      } catch (e: any) {
+        setError(e.message ?? "Gagal memuat data");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [assessmentId, router, supabase]);
+
+  const getStudentLabel = (row: AttemptRow) => labels[row.student_id] ?? "Siswa";
+  const attemptHref = (attemptId: string) =>
+    assessmentId ? `/teacher/assessments/${assessmentId}/attempts/${attemptId}` : "#";
+
+  const leaderboard = useMemo(() => {
+    const map = new Map<string, AttemptRow>();
+    results.forEach((row) => {
+      if (!map.has(row.student_id)) {
+        map.set(row.student_id, row);
+      }
     });
-  }
-
-  const getStudentLabel = (row: AttemptRow) =>
-    labels[row.student_id] ?? "Siswa";
+    return Array.from(map.values());
+  }, [results]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-sky-50 via-slate-50 to-sky-100">
@@ -114,31 +154,53 @@ export default async function TeacherAssessmentDetail({
             >
               {assessment?.is_published ? "OPEN" : "CLOSED"}
             </span>
-            <Link
-              href="/teacher"
+            <button
+              onClick={() => router.push("/teacher/assessments")}
               className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Kembali
-            </Link>
+            </button>
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {loading ? (
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
+            <p className="text-sm text-slate-600">Loading...</p>
+          </div>
+        ) : error ? (
+          <div className="mt-6 rounded-2xl border border-rose-200 bg-white/80 p-6 shadow-sm">
+            <p className="text-sm text-rose-700">{error}</p>
+          </div>
+        ) : (
+          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur">
             <h2 className="text-lg font-bold text-slate-900">Nilai Tertinggi</h2>
-            <p className="mt-1 text-sm text-slate-600">Top skor untuk assessment ini.</p>
-            <div className="mt-4">
-              {!top ? (
+            <p className="mt-1 text-sm text-slate-600">
+              Semua murid yang sudah selesai, urut skor tertinggi.
+            </p>
+            <div className="mt-4 space-y-3">
+              {leaderboard.length === 0 ? (
                 <div className="text-sm text-slate-500">Belum ada hasil.</div>
               ) : (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
-                  <div className="text-sm font-semibold text-slate-900">
-                    {getStudentLabel(top)}
-                  </div>
-                  <div className="text-sm font-bold text-sky-700">
-                    {top.score ?? 0}
-                  </div>
-                </div>
+                leaderboard.map((row, idx) => (
+                  <Link
+                    key={row.student_id}
+                    href={attemptHref(row.id)}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/60"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                        {idx + 1}
+                      </span>
+                      <div className="text-sm font-semibold text-slate-900">
+                        {getStudentLabel(row)}
+                      </div>
+                    </div>
+                    <div className="text-sm font-bold text-sky-700">
+                      {row.score ?? 0}
+                    </div>
+                  </Link>
+                ))
               )}
             </div>
           </div>
@@ -147,13 +209,14 @@ export default async function TeacherAssessmentDetail({
             <h2 className="text-lg font-bold text-slate-900">Latest Results</h2>
             <p className="mt-1 text-sm text-slate-600">Attempt terbaru untuk assessment ini.</p>
             <div className="mt-4 space-y-3">
-              {latest.length === 0 ? (
+              {results.length === 0 ? (
                 <div className="text-sm text-slate-500">Belum ada hasil.</div>
               ) : (
-                latest.map((r) => (
-                  <div
+                results.map((r) => (
+                  <Link
                     key={r.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+                    href={attemptHref(r.id)}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/60"
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-slate-900">
@@ -166,12 +229,13 @@ export default async function TeacherAssessmentDetail({
                     <div className="text-sm font-bold text-sky-700">
                       {r.score ?? 0}
                     </div>
-                  </div>
+                  </Link>
                 ))
               )}
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

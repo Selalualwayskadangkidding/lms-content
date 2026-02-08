@@ -82,7 +82,7 @@ export async function POST(req: Request) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role,is_active")
+    .select("role,is_active,name")
     .eq("id", data.user.id)
     .maybeSingle();
 
@@ -118,6 +118,22 @@ export async function POST(req: Request) {
       role: "STUDENT",
       is_active: true,
     });
+  }
+
+  if (!profile.name || profile.name.trim() === "") {
+    try {
+      const admin = createAdminClient();
+      const { data: adminUser } = await admin.auth.admin.getUserById(data.user.id);
+      const displayName =
+        adminUser?.user?.user_metadata?.display_name ??
+        adminUser?.user?.user_metadata?.name ??
+        (adminUser?.user?.email ? adminUser.user.email.split("@")[0] : null);
+      if (displayName) {
+        await admin.from("profiles").update({ name: displayName }).eq("id", data.user.id);
+      }
+    } catch {
+      // ignore if service role not configured
+    }
   }
 
   return NextResponse.json({
