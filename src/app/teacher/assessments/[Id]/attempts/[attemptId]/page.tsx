@@ -136,16 +136,19 @@ export default function TeacherAttemptDetailPage() {
         if (qErr) throw qErr;
 
         const sortedQuestions = (qRows ?? [])
-          .map((q) => ({
-            ...q,
-            options: [...(q.options ?? [])].sort(
-              (a, b) => (a.position ?? 0) - (b.position ?? 0)
-            ),
-            correct_option_id:
-              (Array.isArray((q as any).answer_keys)
-                ? (q as any).answer_keys[0]?.correct_option_id
-                : null) ?? null,
-          }))
+          .map((q) => {
+            const answerKeys = (q as any).answer_keys;
+            const correctOptionId = Array.isArray(answerKeys)
+              ? answerKeys[0]?.correct_option_id ?? null
+              : answerKeys?.correct_option_id ?? null;
+            return {
+              ...q,
+              options: [...(q.options ?? [])].sort(
+                (a, b) => (a.position ?? 0) - (b.position ?? 0)
+              ),
+              correct_option_id: correctOptionId,
+            };
+          })
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)) as QuestionRow[];
         setQuestions(sortedQuestions);
 
@@ -345,7 +348,9 @@ export default function TeacherAttemptDetailPage() {
                       <div className="mt-4 space-y-2">
                         {q.options.map((opt) => {
                           const isSelected = opt.id === selectedId;
-                          const isCorrect = opt.id === correctId;
+                          const hasKey = Boolean(correctId);
+                          const isCorrect = hasKey && opt.id === correctId;
+                          const isWrongSelected = hasKey && isSelected && opt.id !== correctId;
                           return (
                             <div
                               key={opt.id}
@@ -353,7 +358,7 @@ export default function TeacherAttemptDetailPage() {
                                 "flex items-center justify-between rounded-xl border px-4 py-2 text-sm",
                                 isCorrect
                                   ? "border-emerald-300 bg-emerald-50 text-slate-900"
-                                  : isSelected
+                                  : isWrongSelected
                                     ? "border-rose-300 bg-rose-50 text-slate-900"
                                     : "border-slate-200 bg-white text-slate-700",
                               ].join(" ")}
@@ -363,9 +368,13 @@ export default function TeacherAttemptDetailPage() {
                                 <span className="text-xs font-semibold text-emerald-700">
                                   Benar
                                 </span>
-                              ) : isSelected ? (
+                              ) : isWrongSelected ? (
                                 <span className="text-xs font-semibold text-rose-700">
                                   Dipilih (Salah)
+                                </span>
+                              ) : !hasKey && isSelected ? (
+                                <span className="text-xs font-semibold text-slate-600">
+                                  Dipilih
                                 </span>
                               ) : null}
                             </div>

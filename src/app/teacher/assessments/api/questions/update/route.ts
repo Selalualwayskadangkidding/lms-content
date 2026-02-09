@@ -43,6 +43,13 @@ export async function POST(req: Request) {
 
   if (qErr) return new NextResponse(qErr.message, { status: 400 });
 
+  const correctIndex = body.options.findIndex((o: any) => o.id === body.correct_option_id);
+  const correctPosition =
+    correctIndex >= 0 ? body.options[correctIndex].position ?? correctIndex + 1 : null;
+  if (!body.correct_option_id || !correctPosition) {
+    return new NextResponse("Correct option not found", { status: 400 });
+  }
+
   const { error: delKeyErr } = await supabase
     .from("answer_keys")
     .delete()
@@ -68,14 +75,7 @@ export async function POST(req: Request) {
 
   if (optErr) return new NextResponse(optErr.message, { status: 400 });
 
-  let correct = insertedOpts?.find((o) => o.id === body.correct_option_id);
-  if (!correct && body.correct_option_id) {
-    // allow mapping by previous option id (when client sends old ids)
-    const pos = body.options.findIndex((o: any) => o.id === body.correct_option_id);
-    if (pos >= 0) {
-      correct = insertedOpts?.find((o) => o.position === pos + 1);
-    }
-  }
+  const correct = insertedOpts?.find((o) => o.position === correctPosition);
   if (!correct) return new NextResponse("Correct option not found", { status: 400 });
 
   const { error: keyErr } = await supabase
