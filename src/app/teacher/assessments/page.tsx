@@ -12,7 +12,7 @@ type AssessmentRow = {
   start_at: string | null;
   end_at: string | null;
   is_published: boolean;
-  subjects?: { name: string }[] | null;
+  subjects?: { name: string } | { name: string }[] | null;
 };
 
 function formatTimeHM(iso: string | null) {
@@ -161,7 +161,9 @@ export default function TeacherAssessmentsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-slate-500">
-                        {a.subjects?.[0]?.name ?? "Mapel"}
+                        {Array.isArray(a.subjects)
+                          ? a.subjects[0]?.name ?? "Mapel"
+                          : a.subjects?.name ?? "Mapel"}
                       </div>
                       <div className="mt-1 truncate text-lg font-extrabold text-slate-900">
                         {a.title}

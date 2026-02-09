@@ -23,7 +23,7 @@ type HistoryAttemptRow = {
   submitted_at: string | null;
   updated_at: string | null;
   score: number | null;
-  assessments?: { title: string } | null;
+  assessments?: { title: string; subjects?: { name: string } | { name: string }[] | null } | null;
 };
 
 type AssessmentRow = {
@@ -33,6 +33,7 @@ type AssessmentRow = {
   duration_minutes: number | null;
   start_at: string | null;
   end_at: string | null;
+  subjects?: { name: string } | { name: string }[] | null;
 };
 
 function formatDateTime(iso: string | null) {
@@ -92,14 +93,14 @@ export default async function StudentHome() {
 
   const { data: history } = await supabase
     .from("attempts")
-    .select("id,assessment_id,status,submitted_at,updated_at,score,assessments(title)")
+    .select("id,assessment_id,status,submitted_at,updated_at,score,assessments(title,subjects(name))")
     .eq("student_id", user?.id ?? "")
     .order("updated_at", { ascending: false })
     .limit(5);
 
   const { data: available } = await supabase
     .from("assessments")
-    .select("id,owner_id,title,duration_minutes,start_at,end_at")
+    .select("id,owner_id,title,duration_minutes,start_at,end_at,subjects(name)")
     .eq("is_published", true)
     .order("start_at", { ascending: true, nullsFirst: true })
     .limit(10);
@@ -115,8 +116,9 @@ export default async function StudentHome() {
 
   const active = activeAttempt as ActiveAttemptRow | null;
   const historyList: HistoryAttemptRow[] = (history ?? []).map((row) => {
-    const assessmentsRaw = (row as { assessments?: { title: string } | { title: string }[] | null })
-      .assessments;
+    const assessmentsRaw = (row as {
+      assessments?: { title: string; subjects?: { name: string } | { name: string }[] | null } | { title: string; subjects?: { name: string } | { name: string }[] | null }[] | null;
+    }).assessments;
     return {
       ...row,
       assessments: Array.isArray(assessmentsRaw)
@@ -251,6 +253,12 @@ export default async function StudentHome() {
                         Guru: {teacherById[a.owner_id] ?? "Guru"}
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
+                        Mapel:{" "}
+                        {Array.isArray(a.subjects)
+                          ? a.subjects[0]?.name ?? "Mapel"
+                          : a.subjects?.name ?? "Mapel"}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
                         Durasi: {a.duration_minutes ?? 0} menit
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
@@ -302,6 +310,12 @@ export default async function StudentHome() {
                   <div>
                     <div className="text-sm font-semibold text-slate-900">
                       {h.assessments?.title ?? "Assessment"}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Mapel:{" "}
+                      {Array.isArray(h.assessments?.subjects)
+                        ? h.assessments?.subjects?.[0]?.name ?? "Mapel"
+                        : h.assessments?.subjects?.name ?? "Mapel"}
                     </div>
                     <div className="text-xs text-slate-500">
                       {formatDateTime(h.submitted_at ?? h.updated_at)}

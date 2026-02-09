@@ -66,10 +66,10 @@ export default function RegisterPage() {
     }
 
     const origin = getAuthOrigin();
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signUp({
       email: emailTrimmed,
+      password,
       options: {
-        shouldCreateUser: true,
         data: { name },
         emailRedirectTo: `${origin}/auth/callback?next=/auth/register/success`,
       },

@@ -54,7 +54,28 @@ export default function LoginPage() {
       );
 
       if (!res.ok) {
-        setErr(await res.text());
+        const contentType = res.headers.get("content-type") ?? "";
+        let message = "Login gagal. Cek email dan password.";
+        try {
+          if (contentType.includes("application/json")) {
+            const data = (await res.json()) as { error?: string; message?: string };
+            message = data.error ?? data.message ?? message;
+          } else {
+            const text = (await res.text()).trim();
+            if (text) message = text;
+          }
+        } catch {
+          // ignore parse errors, use default message
+        }
+
+        if (message.toLowerCase().includes("invalid login credentials")) {
+          message = "Email atau password salah.";
+        }
+        if (message.toLowerCase().includes("email not confirmed")) {
+          message = "Email belum diverifikasi. Silakan cek inbox.";
+        }
+
+        setErr(message);
         return;
       }
 

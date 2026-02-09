@@ -13,7 +13,7 @@ type AssessmentRow = {
   end_at: string | null;
   duration_minutes: number | null;
   is_published: boolean;
-  subjects?: { name: string }[] | null;
+  subjects?: { name: string } | { name: string }[] | null;
 };
 
 function formatTimeHM(iso: string | null) {
@@ -287,6 +287,10 @@ export default function StudentAssessmentsPage() {
                             ? "TUTUP"
                             : "DIBUKA";
                           const teacherName = teacherById[a.owner_id] ?? "Guru";
+                          const rawSubjects = a.subjects;
+                          const subjectName = Array.isArray(rawSubjects)
+                            ? rawSubjects[0]?.name
+                            : rawSubjects?.name;
                           const feedback = feedbackByAssessment[a.id] ?? null;
                           return (
                             <div
@@ -295,14 +299,14 @@ export default function StudentAssessmentsPage() {
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <div className="text-xs font-semibold text-slate-500">
-                                    {a.subjects?.[0]?.name ?? "Mapel"}
-                                  </div>
                                   <div className="mt-1 truncate text-lg font-extrabold text-slate-900">
                                     {a.title}
                                   </div>
                                   <div className="mt-1 text-xs font-semibold text-slate-500">
                                     Guru: {teacherName}
+                                  </div>
+                                  <div className="mt-1 text-xs text-slate-500">
+                                    Mapel: {subjectName ?? "Mapel"}
                                   </div>
                                   {a.description ? (
                                     <p className="mt-1 line-clamp-2 text-sm text-slate-600">
